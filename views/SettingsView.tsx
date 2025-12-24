@@ -13,6 +13,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
   const [newUsername, setNewUsername] = useState(currentUser.username);
   const [newPassword, setNewPassword] = useState(currentUser.password);
   const [addUserForm, setAddUserForm] = useState({ username: '', password: '' });
+  const [importJson, setImportJson] = useState('');
 
   const handleUpdateProfile = () => {
     setAppState(prev => ({
@@ -46,10 +47,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
     setAppState(prev => ({ ...prev, theme: t }));
   };
 
-  const resetAllData = () => {
-    if (confirm('تحذير: سيتم مسح جميع البيانات المسجلة على هذا المتصفح وإعادة ضبط المصنع. هل تريد الاستمرار؟')) {
-      localStorage.removeItem('smart_prize_v1_state');
-      window.location.reload();
+  const exportData = () => {
+    const saved = localStorage.getItem('smart_prize_app_v2_data');
+    if (saved) {
+      navigator.clipboard.writeText(saved);
+      alert('تم نسخ كود البيانات بنجاح. يمكنك الآن لصقه في نسخة Vercel.');
+    }
+  };
+
+  const handleImport = () => {
+    try {
+      const parsed = JSON.parse(importJson);
+      if (parsed.users && parsed.financialData) {
+        setAppState(parsed);
+        localStorage.setItem('smart_prize_app_v2_data', importJson);
+        alert('تم استيراد البيانات بنجاح! سيتم إعادة تحميل الصفحة.');
+        window.location.reload();
+      } else {
+        alert('الكود المدخل غير صحيح.');
+      }
+    } catch (e) {
+      alert('خطأ في تنسيق الكود.');
     }
   };
 
@@ -94,6 +112,37 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
           <button onClick={() => changeTheme('deep-dark')} className="p-4 border-2 border-zinc-900 rounded-xl bg-zinc-900 text-white font-bold hover:bg-zinc-800">أسود داكن</button>
           <button onClick={() => changeTheme('nature-green')} className="p-4 border-2 border-emerald-500 rounded-xl bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-50">أخضر طبيعي</button>
           <button onClick={() => changeTheme('royal-purple')} className="p-4 border-2 border-indigo-500 rounded-xl bg-indigo-50 text-indigo-600 font-bold hover:bg-indigo-50">بنفسجي ملكي</button>
+        </div>
+      </div>
+
+      {/* Data Transfer - الحل لمشكلة Vercel */}
+      <div className="bg-blue-50 p-8 rounded-2xl border border-blue-100">
+        <h3 className="text-xl font-bold text-blue-800 mb-2">🔄 نقل البيانات إلى Vercel</h3>
+        <p className="text-blue-600 text-sm mb-6">استخدم هذه الأدوات لنقل بياناتك من جهازك المحلي إلى رابط Vercel أو العكس.</p>
+        
+        <div className="space-y-4">
+          <button 
+            onClick={exportData}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors"
+          >
+            تصدير (نسخ) كود البيانات الحالية
+          </button>
+          
+          <div className="mt-4">
+            <label className="block text-sm font-bold mb-2">استيراد بيانات من كود خارجي:</label>
+            <textarea 
+              value={importJson}
+              onChange={(e) => setImportJson(e.target.value)}
+              placeholder="الصق كود البيانات هنا..."
+              className="w-full h-24 p-3 border rounded-xl text-xs font-mono mb-2"
+            />
+            <button 
+              onClick={handleImport}
+              className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-emerald-700 transition-colors"
+            >
+              تشغيل الاستيراد
+            </button>
+          </div>
         </div>
       </div>
 
@@ -149,22 +198,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Advanced Settings */}
-      <div className="bg-red-50 p-8 rounded-2xl border border-red-100">
-        <h3 className="text-xl font-bold text-red-800 mb-4">⚠️ منطقة الخطر</h3>
-        <p className="text-red-600 text-sm mb-6">هذه الإعدادات قد تؤدي إلى فقدان البيانات بشكل دائم من متصفحك الحالي.</p>
-        <button 
-          onClick={resetAllData}
-          className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
-        >
-          إعادة ضبط المصنع بالكامل
-        </button>
-      </div>
-      
-      <div className="text-center text-gray-400 text-xs">
-        <p>ملاحظة: يتم تخزين جميع البيانات محلياً في متصفحك فقط لضمان الخصوصية التامة.</p>
       </div>
     </div>
   );

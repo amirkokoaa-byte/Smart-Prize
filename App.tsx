@@ -23,50 +23,53 @@ const DEFAULT_STATE: AppState = {
   theme: 'modern-blue'
 };
 
+const STORAGE_KEY = 'smart_prize_app_v2_data';
+
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     try {
-      const saved = localStorage.getItem('smart_prize_v1_state');
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // نضمن دائماً وجود حساب الأدمن ووجود الكائنات الأساسية
         return {
           ...DEFAULT_STATE,
           ...parsed,
-          currentUser: null, // نطلب تسجيل الدخول دائماً عند تحديث الصفحة للأمان
+          currentUser: null, // طلب تسجيل الدخول دائماً للأمان
           users: parsed.users?.length ? parsed.users : DEFAULT_STATE.users
         };
       }
     } catch (e) {
-      console.error("Error loading state from localStorage", e);
+      console.warn("تنبيه: تعذر قراءة البيانات السابقة، سيتم بدء جلسة جديدة.");
     }
     return DEFAULT_STATE;
   });
 
   const [activeTab, setActiveTab] = useState<'expenses' | 'obligations' | 'history' | 'settings'>('expenses');
 
-  // حفظ الحالة عند أي تغيير
   useEffect(() => {
-    localStorage.setItem('smart_prize_v1_state', JSON.stringify(state));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.error("خطأ في حفظ البيانات: قد تكون مساحة التخزين ممتلئة.");
+    }
   }, [state]);
 
-  // استخراج بيانات المستخدم الحالي بعزل تام
   const currentUserData = useMemo(() => {
     if (!state.currentUser) return INITIAL_FINANCIAL_DATA;
-    const data = state.financialData[state.currentUser.id];
-    return data || INITIAL_FINANCIAL_DATA;
+    return state.financialData[state.currentUser.id] || { ...INITIAL_FINANCIAL_DATA };
   }, [state.currentUser, state.financialData]);
 
   const updateUserData = (updater: (data: FinancialData) => FinancialData) => {
     if (!state.currentUser) return;
     const userId = state.currentUser.id;
     setState(prev => {
-      const currentData = prev.financialData[userId] || INITIAL_FINANCIAL_DATA;
+      const currentData = prev.financialData[userId] || { ...INITIAL_FINANCIAL_DATA };
+      const updatedData = updater(currentData);
       return {
         ...prev,
         financialData: {
           ...prev.financialData,
-          [userId]: updater(currentData)
+          [userId]: updatedData
         }
       };
     });

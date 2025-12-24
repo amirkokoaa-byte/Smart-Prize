@@ -28,7 +28,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
         <div className="text-center mb-10">
           <div className="inline-block p-4 bg-blue-50 rounded-3xl mb-4 text-4xl">💰</div>
           <h1 className="text-4xl font-black text-slate-800 mb-2">Smart Prize</h1>
-          <p className="text-slate-400 font-medium">نظام الإدارة المالية الذكي</p>
+          <p className="text-slate-400 font-medium text-sm">نظام الإدارة المالية الذكي</p>
+          <div className="mt-4 bg-blue-50 p-2 rounded-lg text-[10px] text-blue-600 border border-blue-100">
+            ملاحظة: يتم تخزين بياناتك محلياً في هذا المتصفح فقط لضمان أقصى درجات الخصوصية.
+          </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -65,8 +68,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
           </button>
         </form>
 
-        <div className="mt-8 text-center text-slate-400 text-sm">
-          <p>أهلاً بك في نظام الإدارة المالية الأكثر أماناً</p>
+        <div className="mt-8 text-center text-slate-400 text-xs">
+          <p>الحساب الافتراضي: admin / admin</p>
         </div>
       </div>
     </div>
