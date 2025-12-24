@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { User, AppState, Theme, FinancialData, ChatMessage, Expense, Obligation } from './types';
+import { User, AppState, Theme, FinancialData } from './types';
 import Login from './views/Login';
 import Dashboard from './views/Dashboard';
 import Sidebar from './components/Sidebar';
@@ -23,34 +23,36 @@ const DEFAULT_STATE: AppState = {
   theme: 'modern-blue'
 };
 
-const STORAGE_KEY = 'smart_prize_app_v2_data';
+// تم توحيد المفتاح لضمان عدم حدوث تعارض
+export const APP_STORAGE_KEY = 'smart_prize_v3_stable_final';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(APP_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
-          ...DEFAULT_STATE,
-          ...parsed,
-          currentUser: null, // طلب تسجيل الدخول دائماً للأمان
-          users: parsed.users?.length ? parsed.users : DEFAULT_STATE.users
+        // تأكد من دمج البيانات الافتراضية مع المحفوظة لتجنب خصائص مفقودة
+        return { 
+          ...DEFAULT_STATE, 
+          ...parsed, 
+          currentUser: null // إجبار الدخول عند إعادة التحميل للأمان
         };
       }
-    } catch (e) {
-      console.warn("تنبيه: تعذر قراءة البيانات السابقة، سيتم بدء جلسة جديدة.");
+    } catch (e) { 
+      console.error("Critical Storage Error: Resetting to default state.");
     }
     return DEFAULT_STATE;
   });
 
   const [activeTab, setActiveTab] = useState<'expenses' | 'obligations' | 'history' | 'settings'>('expenses');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
-      console.error("خطأ في حفظ البيانات: قد تكون مساحة التخزين ممتلئة.");
+      console.error("Failed to save state to localStorage");
     }
   }, [state]);
 
@@ -64,24 +66,22 @@ const App: React.FC = () => {
     const userId = state.currentUser.id;
     setState(prev => {
       const currentData = prev.financialData[userId] || { ...INITIAL_FINANCIAL_DATA };
-      const updatedData = updater(currentData);
       return {
         ...prev,
         financialData: {
           ...prev.financialData,
-          [userId]: updatedData
+          [userId]: updater(currentData)
         }
       };
     });
   };
 
-  const handleLogin = (user: User) => {
-    setState(prev => ({ ...prev, currentUser: user }));
-  };
-
+  const handleLogin = (user: User) => setState(prev => ({ ...prev, currentUser: user }));
+  
   const handleLogout = () => {
     setState(prev => ({ ...prev, currentUser: null }));
     setActiveTab('expenses');
+    setIsSidebarOpen(false);
   };
 
   if (!state.currentUser) {
@@ -91,19 +91,24 @@ const App: React.FC = () => {
   const themeConfig = THEMES[state.theme] || THEMES['modern-blue'];
 
   return (
-    <div className={`flex h-screen overflow-hidden ${themeConfig.body} ${themeConfig.text}`}>
+    <div className={`flex h-screen overflow-hidden ${themeConfig.body} ${themeConfig.text} font-sans transition-colors duration-500`}>
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={(t) => { setActiveTab(t); setIsSidebarOpen(false); }} 
         onLogout={handleLogout}
         themeConfig={themeConfig}
-        obligations={currentUserData.obligations}
+        obligations={currentUserData.obligations || []}
+        isOpen={isSidebarOpen}
       />
       
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        <Header themeConfig={themeConfig} />
+        <Header themeConfig={themeConfig} onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
           <Dashboard 
             activeTab={activeTab}
             financialData={currentUserData}
@@ -116,10 +121,10 @@ const App: React.FC = () => {
         </main>
 
         <Chat 
-          messages={state.messages} 
+          messages={state.messages || []} 
           currentUser={state.currentUser}
           users={state.users}
-          onSendMessage={(msg) => setState(prev => ({ ...prev, messages: [...prev.messages, msg] }))}
+          onSendMessage={(msg) => setState(prev => ({ ...prev, messages: [...(prev.messages || []), msg] }))}
           themeConfig={themeConfig}
         />
       </div>
