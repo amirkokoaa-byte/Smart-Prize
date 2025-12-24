@@ -32,15 +32,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
     };
     setAppState(prev => ({ ...prev, users: [...prev.users, newUser] }));
     setAddUserForm({ username: '', password: '' });
+    alert('تم إضافة المستخدم بنجاح');
   };
 
   const handleDeleteUser = (id: string) => {
     if (id === 'admin') return alert('لا يمكن حذف حساب الأدمن');
-    setAppState(prev => ({ ...prev, users: prev.users.filter(u => u.id !== id) }));
+    if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+      setAppState(prev => ({ ...prev, users: prev.users.filter(u => u.id !== id) }));
+    }
   };
 
   const changeTheme = (t: Theme) => {
     setAppState(prev => ({ ...prev, theme: t }));
+  };
+
+  const resetAllData = () => {
+    if (confirm('تحذير: سيتم مسح جميع البيانات المسجلة على هذا المتصفح وإعادة ضبط المصنع. هل تريد الاستمرار؟')) {
+      localStorage.removeItem('smart_prize_v1_state');
+      window.location.reload();
+    }
   };
 
   return (
@@ -87,7 +97,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
         </div>
       </div>
 
-      {/* User Management (Admin Only Simulation) */}
+      {/* User Management */}
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
         <h3 className="text-xl font-bold mb-6">👥 إدارة المستخدمين</h3>
         <div className="flex flex-col md:flex-row gap-4 mb-8 items-end border-b pb-8">
@@ -139,6 +149,22 @@ const SettingsView: React.FC<SettingsViewProps> = ({ users, setAppState, current
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Advanced Settings */}
+      <div className="bg-red-50 p-8 rounded-2xl border border-red-100">
+        <h3 className="text-xl font-bold text-red-800 mb-4">⚠️ منطقة الخطر</h3>
+        <p className="text-red-600 text-sm mb-6">هذه الإعدادات قد تؤدي إلى فقدان البيانات بشكل دائم من متصفحك الحالي.</p>
+        <button 
+          onClick={resetAllData}
+          className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
+        >
+          إعادة ضبط المصنع بالكامل
+        </button>
+      </div>
+      
+      <div className="text-center text-gray-400 text-xs">
+        <p>ملاحظة: يتم تخزين جميع البيانات محلياً في متصفحك فقط لضمان الخصوصية التامة.</p>
       </div>
     </div>
   );

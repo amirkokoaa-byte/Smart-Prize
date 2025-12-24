@@ -15,40 +15,61 @@ const INITIAL_FINANCIAL_DATA: FinancialData = {
   history: []
 };
 
+const DEFAULT_STATE: AppState = {
+  currentUser: null,
+  users: [{ id: 'admin', username: 'admin', password: 'admin' }],
+  financialData: {},
+  messages: [],
+  theme: 'modern-blue'
+};
+
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('smart_prize_state');
-    if (saved) return JSON.parse(saved);
-    return {
-      currentUser: null,
-      users: [{ id: 'admin', username: 'admin', password: 'admin' }],
-      financialData: {},
-      messages: [],
-      theme: 'modern-blue'
-    };
+    try {
+      const saved = localStorage.getItem('smart_prize_v1_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // نضمن دائماً وجود حساب الأدمن ووجود الكائنات الأساسية
+        return {
+          ...DEFAULT_STATE,
+          ...parsed,
+          currentUser: null, // نطلب تسجيل الدخول دائماً عند تحديث الصفحة للأمان
+          users: parsed.users?.length ? parsed.users : DEFAULT_STATE.users
+        };
+      }
+    } catch (e) {
+      console.error("Error loading state from localStorage", e);
+    }
+    return DEFAULT_STATE;
   });
 
   const [activeTab, setActiveTab] = useState<'expenses' | 'obligations' | 'history' | 'settings'>('expenses');
 
+  // حفظ الحالة عند أي تغيير
   useEffect(() => {
-    localStorage.setItem('smart_prize_state', JSON.stringify(state));
+    localStorage.setItem('smart_prize_v1_state', JSON.stringify(state));
   }, [state]);
 
+  // استخراج بيانات المستخدم الحالي بعزل تام
   const currentUserData = useMemo(() => {
     if (!state.currentUser) return INITIAL_FINANCIAL_DATA;
-    return state.financialData[state.currentUser.id] || INITIAL_FINANCIAL_DATA;
+    const data = state.financialData[state.currentUser.id];
+    return data || INITIAL_FINANCIAL_DATA;
   }, [state.currentUser, state.financialData]);
 
   const updateUserData = (updater: (data: FinancialData) => FinancialData) => {
     if (!state.currentUser) return;
     const userId = state.currentUser.id;
-    setState(prev => ({
-      ...prev,
-      financialData: {
-        ...prev.financialData,
-        [userId]: updater(prev.financialData[userId] || INITIAL_FINANCIAL_DATA)
-      }
-    }));
+    setState(prev => {
+      const currentData = prev.financialData[userId] || INITIAL_FINANCIAL_DATA;
+      return {
+        ...prev,
+        financialData: {
+          ...prev.financialData,
+          [userId]: updater(currentData)
+        }
+      };
+    });
   };
 
   const handleLogin = (user: User) => {
@@ -57,13 +78,14 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setState(prev => ({ ...prev, currentUser: null }));
+    setActiveTab('expenses');
   };
 
   if (!state.currentUser) {
     return <Login onLogin={handleLogin} users={state.users} />;
   }
 
-  const themeConfig = THEMES[state.theme];
+  const themeConfig = THEMES[state.theme] || THEMES['modern-blue'];
 
   return (
     <div className={`flex h-screen overflow-hidden ${themeConfig.body} ${themeConfig.text}`}>
